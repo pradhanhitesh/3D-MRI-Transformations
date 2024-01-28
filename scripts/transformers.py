@@ -72,3 +72,61 @@ class MeanTransformation():
         std_image = self._get_std_image(image_data)
 
         return mean_image, std_image
+    
+
+class DiscreteWaveletTranformation():
+
+    _parameter_constraints: dict = {
+        "axis": ['coronal', 'axial', 'sagittal']
+    }
+    
+    def __init__(
+        self,
+        filepath,
+        axis='coronal',
+        slice_number = 50,
+        wavelet = 'db1',
+        level = 1,
+        add_channel = False
+    ):
+        
+        if axis not in self._parameter_constraints["axis"]:
+            raise ValueError(f"Invalid value for 'axis'. Allowed values are {self._parameter_constraints['axis']}")
+
+        if not os.path.isfile(filepath):
+            raise ValueError(f"Invalid file: {filepath}")
+        
+        self.axis = axis
+        self.add_channel = add_channel
+        self.filepath = filepath
+        self.wavelet = wavelet
+        self.level = level
+        self.slice_number = slice_number
+
+
+    def _load_nii(self,filepath):
+        image = nibabel.load(filepath)
+        image_data = image.get_fdata()
+
+        return image_data
+    
+    def _get_slice(self,slice_number):
+        image = self._load_nii(self.filepath)
+        if self.axis == 'sagittal':
+            image = image[slice_number,:,:]
+        elif self.axis == 'axial':
+            image = image[:,slice_number,:]
+        else:
+            image = image[:,:,slice_number]
+
+        return image
+
+    def apply_dwt(self, image):
+        coeffs = pywt.wavedec2(image, self.wavelet, self.level)
+        return coeffs
+    
+    def get_dwt_image(self):
+        slice_image = self._get_slice(self.slice_number)
+        dwt_images = apply_dwt(slice_image)
+
+        return dwt_images
